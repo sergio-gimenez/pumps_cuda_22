@@ -8,7 +8,7 @@ s2g_gpu_scatter_kernel(uint32_t *in, uint32_t *out, int len)
         if (inIdx < len) {
             uint32_t intermediate = outInvariant(in[inIdx]);
             for (int outIdx = 0; outIdx < len; ++outIdx) {
-                // TODO Shouldn' this be atomic? Or is it guaranteed that no two threads will write to the same outIdx?
+                //This operation has to be atomic! Otherwise we see race conditions
                 atomicAdd(&(out[outIdx]), outDependent(intermediate, inIdx, outIdx));
             }
         }
