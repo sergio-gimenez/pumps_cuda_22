@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/nct01/nct01051/pumps_cuda_22/gather/build",
-  "command": "/usr/local/cuda-9.1/bin/nvcc   -I/home/nct01/nct01051/pumps_cuda_22/gather/gather -I/home/nct01/nct01051/pumps_cuda_22/gather/src -I/usr/local/cuda-9.1/include    -std=c++11 -x cu -c /home/nct01/nct01051/pumps_cuda_22/gather/main.cu -o CMakeFiles/gather.dir/main.cu.o",
-  "file": "/home/nct01/nct01051/pumps_cuda_22/gather/main.cu"
-}
-]
