@@ -42,31 +42,13 @@ s2g_gpu_gather(uint32_t *in, uint32_t *out, int len)
     // https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#device-memory
 
     // "in" and "out" passed by reference, assume already in host memory and initialized
-
-    // size_t size = len * sizeof(uint32_t);
-
-    // // Allocate the device input vector in
-    // uint32_t *d_in = NULL;
-    // cudaMalloc((void **)&d_in, size);
-
-    // // Allocate the device output vector out
-    // uint32_t *d_out = NULL;
-    // cudaMalloc((void **)&d_out, size);
-
-    // // Copy vectors from host memory to device memory
-    // cudaMemcpy(d_in, in, size, cudaMemcpyHostToDevice);
-    // cudaMemcpy(d_out, out, size, cudaMemcpyHostToDevice);
+    // What is being passed here, in reality is the cuda memory allocation.
 
     // Invoke kernel
     int threadsPerBlock = 256; // Arbitrary number?
 
     int blocksPerGrid = (len + threadsPerBlock - 1) / threadsPerBlock;
-    // s2g_gpu_gather_kernel<<<blocksPerGrid, threadsPerBlock>>>(d_in, d_out, len);
     s2g_gpu_gather_kernel<<<blocksPerGrid, threadsPerBlock>>>(in, out, len);
-
-    // Copy result from device memory to host memory
-    // h_C contains the result in host memory
-    // cudaMemcpy(out, d_out, size, cudaMemcpyDeviceToHost);
 }
 
 static int
