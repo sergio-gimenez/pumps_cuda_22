@@ -8,16 +8,17 @@ __global__ void
 gpu_normal_kernel(float *in_val, float *in_pos, float *out, int grid_size, int num_in)
 {
     // This includes all input elements' effects on all grid points
+    // taking the outIndex to use
     unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
     float inval2;
-    float distance;
+    float dist;
     float result;
     // going from 0 to num_in if the outIdx is less than grid size
     if (outIdx < grid_size) {
         for (unsigned int inIdx = 0; inIdx < num_in; ++inIdx) {
-            inval2   = in_val[inIdx] * in_val[inIdx];
-            distance = in_pos[inIdx] - (float)outIdx;
-            result += inval2 / (distance * distance);
+            inval2 = in_val[inIdx] * in_val[inIdx];
+            dist   = in_pos[inIdx] - (float)outIdx;
+            result += inval2 / (dist * dist);
         }
         out[outIdx] = result;
     }
@@ -31,17 +32,17 @@ gpu_cutoff_kernel(float *in_val, float *in_pos, float *out, int grid_size, int n
 
     unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
     float inval2;
-    float distance;
+    float dist;
     float result;
-    float square_distance;
+    float dist2;
     // going from 0 to num_in if the outIdx is less than grid size
     if (outIdx < grid_size) {
         for (unsigned int inIdx = 0; inIdx < num_in; ++inIdx) {
-            distance        = in_pos[inIdx] - (float)outIdx;
-            square_distance = distance * distance;
-            if (square_distance < cutoff2) {
+            dist  = in_pos[inIdx] - (float)outIdx;
+            dist2 = dist * dist;
+            if (dist2 < cutoff2) {
                 inval2 = in_val[inIdx] * in_val[inIdx];
-                result += inval2 / (distance * distance);
+                result += inval2 / (dist * dist);
             }
         }
         out[outIdx] = result;
@@ -60,24 +61,24 @@ gpu_cutoff_binned_kernel(int *bin_ptrs, float *in_val_sorted, float *in_pos_sort
     // find the input bin for the specific point.
     unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
 
-    float distance;
+    float dist;
     float result = 0;
 
-    unsigned int i;
-    float square_distance;
+    unsigned int iterator;
+    float dist2;
     if (outIdx < grid_size) {
         for (unsigned int bin = 0; bin < NUM_BINS; ++bin) {
             unsigned int startOfBin = bin_ptrs[bin];
             unsigned int endOfBin   = bin_ptrs[bin + 1];
-            distance                = in_pos_sorted[startOfBin] - (float)outIdx;
-            square_distance         = distance * distance;
-            if (square_distance <= cutoff2) {
+            dist                    = in_pos_sorted[startOfBin] - (float)outIdx;
+            dist2                   = dist * dist;
+            if (dist2 <= cutoff2) {
                 /*checking for if the bin starting point is less than the cutoff or not. */
-                for (i = startOfBin; i < endOfBin; ++i) {
-                    float point_distance         = in_pos_sorted[i] - (float)outIdx;
-                    float points_square_distance = point_distance * point_distance;
-                    if (points_square_distance <= cutoff2)
-                        result += (in_val_sorted[i] * in_val_sorted[i]) / points_square_distance;
+                for (iterator = startOfBin; iterator < endOfBin; ++iterator) {
+                    float point_dist   = in_pos_sorted[iterator] - (float)outIdx;
+                    float points_dist2 = point_dist * point_dist;
+                    if (points_dist2 <= cutoff2)
+                        result += (in_val_sorted[iterator] * in_val_sorted[iterator]) / points_dist2;
                 }
             }
         }
@@ -133,45 +134,75 @@ gpu_cutoff_binned(int *bin_ptrs, float *in_val_sorted, float *in_pos_sorted, flo
 __global__ void
 histogram(float *in_pos, int *bin_counts, int num_in, int grid_size)
 {
-    int out_idx = blockDim.x * blockIdx.x + threadIdx.x;
-
-    if (out_idx < grid_size) {                            // only threads that are in range
-        int count = 0;                                    // count the number of particles in this bin
-        for (int in_idx = 0; in_idx < num_in; ++in_idx) { // loop over all particles
-            if (in_pos[in_idx] >= out_idx && in_pos[in_idx] < out_idx + 1) { // check if particle is in this bin
-                count++;
-            }
-        }
-        bin_counts[out_idx] = count; // write the count to global memory
+    unsigned int index = threadIdx.x + blockIdx.x * blockDim.x;
+    if (index < num_in) {
+        unsigned int binIdx = (unsigned int)((in_pos[index] / grid_size) * NUM_BINS);
+        atomicAdd(&bin_counts[binIdx], 1);
     }
 }
+// bin_counts[out_idx] = count; // write the count to global memory
+// }
+// }
 
 __global__ void
 scan(int *bin_counts, int *bin_ptrs)
 {
-    int out_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    __shared__ unsigned int temp[NUM_BINS]; // allocated on invocation
+    int thid = threadIdx.x;
 
-    if (out_idx < NUM_BINS) { // only threads that are in range
-        int sum = 0;
-        for (int i = 0; i <= out_idx; ++i) { // loop over all bins
-            sum += bin_counts[i];            // add up the counts
+    int offset = 1;
+    int n      = NUM_BINS;
+
+    temp[2 * thid]     = bin_counts[2 * thid]; // load input into shared memory
+    temp[2 * thid + 1] = bin_counts[2 * thid + 1];
+    int ai, bi;
+
+    for (int d = n >> 1; d > 0; d >>= 1) // build sum in place up the tree
+    {
+        __syncthreads();
+        if (thid < d) {
+            ai = offset * (2 * thid + 1) - 1;
+            bi = offset * (2 * thid + 2) - 1;
+            temp[bi] += temp[ai];
         }
-        bin_ptrs[out_idx] = sum; // write the sum to global memory
+        offset *= 2;
     }
+    if (thid == 0) {
+        temp[n - 1] = 0;
+    } // clear the last element
+
+    for (int d = 1; d < n; d *= 2) // traverse down tree & build scan
+    {
+        offset >>= 1;
+        __syncthreads();
+        if (thid < d) {
+            ai       = offset * (2 * thid + 1) - 1;
+            bi       = offset * (2 * thid + 2) - 1;
+            float t  = temp[ai];
+            temp[ai] = temp[bi];
+            temp[bi] += t;
+        }
+    }
+
+    __syncthreads();
+    bin_ptrs[2 * thid]     = temp[2 * thid]; // write results to device memory
+    bin_ptrs[2 * thid + 1] = temp[2 * thid + 1];
+    if (thid == 511)
+        bin_ptrs[1024] = bin_ptrs[1023] + bin_counts[1023];
 }
 
 __global__ void
 sort(float *in_val, float *in_pos, float *in_val_sorted, float *in_pos_sorted, int grid_size, int num_in,
      int *bin_counts, int *bin_ptrs)
 {
-    int out_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    unsigned int inIdx = threadIdx.x + blockIdx.x * blockDim.x;
+    unsigned int newIdx;
+    if (inIdx < num_in) {
+        unsigned int binIdx = (unsigned int)((in_pos[inIdx] / grid_size) * NUM_BINS);
 
-    if (out_idx < num_in) {                                          // only threads that are in range
-        int bin_idx = (int)(in_pos[out_idx] / grid_size * NUM_BINS); // compute the bin index
-        int new_idx = bin_ptrs[bin_idx] + bin_counts[bin_idx] - 1;   // compute the new index
-        --bin_counts[bin_idx];                                       // decrement the bin count
-        in_val_sorted[new_idx] = in_val[out_idx];                    // write the value to the new index
-        in_pos_sorted[new_idx] = in_pos[out_idx];                    // write the position to the new index
+        newIdx                = bin_ptrs[binIdx + 1] - atomicSub(&bin_counts[binIdx], 1);
+        in_val_sorted[newIdx] = in_val[inIdx];
+        in_pos_sorted[newIdx] = in_pos[inIdx];
     }
 }
 
