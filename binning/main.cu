@@ -8,31 +8,43 @@ __global__ void
 gpu_normal_kernel(float *in_val, float *in_pos, float *out, int grid_size, int num_in)
 {
     // This includes all input elements' effects on all grid points
-
-    int out_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = 0; i < num_in; i++) {
-        float dx = in_pos[i] - out_idx;
-        float r  = sqrt(dx * dx + in_val[i] * in_val[i]);
-        out[out_idx] += 1.0 / r;
+    unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
+    float inval2;
+    float distance;
+    float result;
+    // going from 0 to num_in if the outIdx is less than grid size
+    if (outIdx < grid_size) {
+        for (unsigned int inIdx = 0; inIdx < num_in; ++inIdx) {
+            inval2   = in_val[inIdx] * in_val[inIdx];
+            distance = in_pos[inIdx] - (float)outIdx;
+            result += inval2 / (distance * distance);
+        }
+        out[outIdx] = result;
     }
 }
 
 __global__ void
 gpu_cutoff_kernel(float *in_val, float *in_pos, float *out, int grid_size, int num_in, float cutoff2)
 {
-    // This includes only those input elements with distance from the grid point strictly less than the
-    // specified cutoff distance (cutoff2)
+    // This includes only those input elements with distanceance from the grid point strictly less than the
+    // specified cutoff distanceance (cutoff2)
 
-    int out_idx = blockIdx.x * blockDim.x + threadIdx.x;
-
-    for (int i = 0; i < num_in; i++) {
-        float dx = in_pos[i] - out_idx;
-        float r2 = dx * dx + in_val[i] * in_val[i];
-        if (r2 < cutoff2) {
-            float r = sqrt(r2);
-            out[out_idx] += 1.0 / r;
+    unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
+    float inval2;
+    float distance;
+    float result;
+    float square_distance;
+    // going from 0 to num_in if the outIdx is less than grid size
+    if (outIdx < grid_size) {
+        for (unsigned int inIdx = 0; inIdx < num_in; ++inIdx) {
+            distance        = in_pos[inIdx] - (float)outIdx;
+            square_distance = distance * distance;
+            if (square_distance < cutoff2) {
+                inval2 = in_val[inIdx] * in_val[inIdx];
+                result += inval2 / (distance * distance);
+            }
         }
+        out[outIdx] = result;
     }
 }
 
@@ -45,22 +57,32 @@ gpu_cutoff_binned_kernel(int *bin_ptrs, float *in_val_sorted, float *in_pos_sort
     // should first compute the bins that overlap the cutoff region , then look at all input elements within those bins.
     // Looping over all bins will not earn full credit
 
-    int out_idx = blockDim.x * blockIdx.x + threadIdx.x;
+    // find the input bin for the specific point.
+    unsigned int outIdx = threadIdx.x + blockIdx.x * blockDim.x;
 
-    float result     = 0;
-    int left_bin_idx = (int)((max(out_idx - 3000.f, 0.0) / grid_size) * NUM_BINS);
+    float distance;
+    float result = 0;
 
-    int right_bin_idx = (int)((min(out_idx + 3000.f, (float)grid_size) / grid_size) * NUM_BINS);
-
-    for (int in_idx = bin_ptrs[left_bin_idx]; in_idx < bin_ptrs[right_bin_idx]; ++in_idx) {
-        const float in_val2 = in_val_sorted[in_idx] * in_val_sorted[in_idx];
-        const float dist    = in_pos_sorted[in_idx] - (float)out_idx;
-        const float dist2   = dist * dist;
-        float s             = cutoff2 > dist2 ? (1 - dist2 / cutoff2) : 0;
-        s                   = s * s;
-        result += s * in_val2 / dist2;
+    unsigned int i;
+    float square_distance;
+    if (outIdx < grid_size) {
+        for (unsigned int bin = 0; bin < NUM_BINS; ++bin) {
+            unsigned int startOfBin = bin_ptrs[bin];
+            unsigned int endOfBin   = bin_ptrs[bin + 1];
+            distance                = in_pos_sorted[startOfBin] - (float)outIdx;
+            square_distance         = distance * distance;
+            if (square_distance <= cutoff2) {
+                /*checking for if the bin starting point is less than the cutoff or not. */
+                for (i = startOfBin; i < endOfBin; ++i) {
+                    float point_distance         = in_pos_sorted[i] - (float)outIdx;
+                    float points_square_distance = point_distance * point_distance;
+                    if (points_square_distance <= cutoff2)
+                        result += (in_val_sorted[i] * in_val_sorted[i]) / points_square_distance;
+                }
+            }
+        }
+        out[outIdx] = result;
     }
-    out[out_idx] = result;
 }
 
 /******************************************************************************
@@ -73,8 +95,8 @@ cpu_normal(float *in_val, float *in_pos, float *out, int grid_size, int num_in)
     for (int inIdx = 0; inIdx < num_in; ++inIdx) {
         const float in_val2 = in_val[inIdx] * in_val[inIdx];
         for (int outIdx = 0; outIdx < grid_size; ++outIdx) {
-            const float dist = in_pos[inIdx] - (float)outIdx;
-            out[outIdx] += in_val2 / (dist * dist);
+            const float distance = in_pos[inIdx] - (float)outIdx;
+            out[outIdx] += in_val2 / (distance * distance);
         }
     }
 }
@@ -226,7 +248,7 @@ eval(const int num_in, const int max, const int grid_size)
     float *out_d    = nullptr;
 
     // Constants
-    const float cutoff  = 3000.0f; // Cutoff distance for optimized computation
+    const float cutoff  = 3000.0f; // Cutoff distanceance for optimized computation
     const float cutoff2 = cutoff * cutoff;
 
     // Extras needed for input binning
