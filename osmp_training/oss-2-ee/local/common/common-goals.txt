@@ -1,0 +1,10 @@
+* Code is completely annotated: you DON'T need to modify it. You only need to compile and execute.
+* Review source code and check the different directives and their clauses. Try to understand what they mean.
+* Pay special attention to data-sharing attributes, including those that does not appear (i.e., the implicit ones).
+* Check several runtime options when executing the program (versions, schedulers, etc.).
+* Check scalability. Execute the program using different number of cpus and compute the speed-up.
+* Change program's arguments that may impact on task granularity (block size, tile size, etc.).
+* Change program's arguments that may impact on the number of tasks (matrix sizes and/or block/tile sizes).
+* Get a task dependency graph to analyse dependences. Does they looks like you expedted?
+* Get different paraver traces using different runtime options or program arguments and compare them.
+

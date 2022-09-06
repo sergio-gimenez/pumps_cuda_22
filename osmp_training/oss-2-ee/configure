@@ -1,0 +1,63 @@
+#!/bin/bash -ex
+ROOTNAME=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+
+export OSS2EE=$ROOTNAME
+export OSS2EE_SETUP_DIR=$OSS2EE/setup
+export OSS2EE_LOCAL_DIR=$OSS2EE/local
+
+export OSS2EE_COMMON_DIR=$OSS2EE_LOCAL_DIR/common
+export OSS2EE_CONFIG_DIR=$OSS2EE_LOCAL_DIR/config
+
+if [ -d "$OSS2EE_LOCAL_DIR/lib" ]; then
+   echo "OmpSs-2 EE (configure): removing previous generated files at lib"
+   rm -fr $OSS2EE_LOCAL_DIR/lib/*
+else
+   echo "OmpSs-2 EE (configure): creating configuration directory at" $OSS2EE_CONFIG_DIR
+   mkdir $OSS2EE_LOCAL_DIR/lib
+fi
+
+pushd $OSS2EE_LOCAL_DIR/src
+make clean
+make
+popd
+
+if [ -d "$OSS2EE_CONFIG_DIR" ]; then
+   echo "OmpSs-2 EE (configure): removing previous configuration"
+   rm -fr $OSS2EE_CONFIG_DIR/*
+else
+   echo "OmpSs-2 EE (configure): creating configuration directory at" $OSS2EE_CONFIG_DIR
+   mkdir $OSS2EE_CONFIG_DIR
+fi
+
+if [ "X$1" == "X" ]; then
+   if [ "X$BSC_MACHINE" == "X" ]; then
+      export OSS2EE_SETUP_NAME=default
+   else
+      export OSS2EE_SETUP_NAME=$BSC_MACHINE
+   fi
+else
+   export OSS2EE_SETUP_NAME=$1
+fi
+export OSS2EE_SETUP_FILE=$OSS2EE_SETUP_DIR/$OSS2EE_SETUP_NAME
+
+echo "OmpSs-2 EE (configure): executing the" $OSS2EE_SETUP_NAME "profile"
+source $OSS2EE_SETUP_FILE
+
+# Updating PATH environment variable (OmpSs-2 EE)
+export PATH=$OSS2EE_LOCAL_DIR/bin:$PATH
+
+# Application relative directories
+export OSS2EE_APP_SETUP_DIR=.setup
+
+# Updating LD_LIBRARY_PATH environment variable (Supporting utilities)
+#export LD_LIBRARY_PATH=$OSS2EE_MPI_LIB_DIR:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=$OSS2EE_MKL_LIB_DIR:$LD_LIBRARY_PATH
+#export LD_LIBRARY_PATH=$OSS2EE_ATL_LIB_DIR:$LD_LIBRARY_PATH
+
+if [ -x "$(command -v wxparaver)" ]; then
+   echo "OmpSs-2 EE (configure): setting paraver as alias of wxparaver"
+   alias paraver='wxparaver'
+fi
+
+# Verbose configuration result
+oss-config

@@ -1,0 +1,19 @@
+#!/bin/bash -e
+
+ROOTNAME=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+CALLERWD=`pwd`
+
+$ROOTNAME/oss-verify
+
+cd $OSS2EE
+for first in `ls -d ??-*/ | cut -f1 -d'/'`; do
+   echo "OmpSs-2 (check): entering..." $first "directory"
+   cd $first
+   for second in `ls -d */ | cut -f1 -d'/'`; do
+      echo "OmpSs-2 (check): entering..." $first/$second "directory"
+      cd $second
+      make
+      cd ..
+   done
+   cd ..
+done

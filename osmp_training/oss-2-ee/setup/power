@@ -1,0 +1,89 @@
+#!/bin/bash
+
+module purge
+
+# Main OmpSs-2 utilities used in Examples and Exercises:
+module load bsc
+module load gcc/6.4.0
+module load ompss-2/2021.11.1
+module load mpich/3.2.1
+module load tampi/1.0.2
+module load extrae/3.7.1
+module load cuda/10.2
+
+# Job scheduler header for one node execution
+cat > $OSS2EE_CONFIG_DIR/job-sched-1n << EOF
+#!/bin/bash
+#SBATCH --job-name=ompss-2-ee
+#SBATCH --chdir=.
+#SBATCH --output=oss-2-ee_%j.out
+#SBATCH --error=oss-2-ee_%j.err
+#SBATCH --cpus-per-task=40
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:1
+#SBATCH --time=00:15:00
+#SBATCH --qos=debug
+EOF
+
+# Job scheduler header for multi-node execution
+cat > $OSS2EE_CONFIG_DIR/job-sched-mn << EOF
+#!/bin/bash
+#SBATCH --job-name=oss-2-ee
+#SBATCH --chdir=.
+#SBATCH --output=oss-2-ee_%j.out
+#SBATCH --error=oss-2-ee_%j.err
+#SBATCH --cpus-per-task=40
+#SBATCH --ntasks=4
+#SBATCH --gpus-per-task=1
+#SBATCH --time=00:15:00
+#SBATCH --qos=debug
+EOF
+
+# Job scheduler header for one node execution with a single GPU
+cat > $OSS2EE_CONFIG_DIR/job-sched-1n-1gpu << EOF
+#!/bin/bash
+#SBATCH --job-name=ompss-2-ee
+#SBATCH --chdir=.
+#SBATCH --output=oss-2-ee_%j.out
+#SBATCH --error=oss-2-ee_%j.err
+#SBATCH --cpus-per-task=160
+#SBATCH --ntasks=1
+#SBATCH --gres=gpu:4
+#SBATCH --time=00:15:00
+#SBATCH --qos=debug
+EOF
+
+# Extra package configuration (for building purposes): MPI
+export OSS2EE_MPI_LIB_DIR=/apps/MPICH/3.2.1/GCC/lib
+export OSS2EE_MPI_INC_DIR=/apps/MPICH/3.2.1/GCC/include
+
+# Extra package configuration (for building purposes): MKL
+export OSS2EE_MKL_LIB_DIR=
+export OSS2EE_MKL_INC_DIR=
+
+# Extra package configuration (for building purposes): ATLAS
+export OSS2EE_ATL_LIB_DIR=
+export OSS2EE_ATL_INC_DIR=
+
+# FIXME-TODO: Find a system-wise alternative, temporary resolution from toni's custom installation
+# Extra package configuration (for building purposes): OpenBLAS
+module use /gpfs/projects/bsc15/bsc15992/modules
+module load openblas/0.3.20
+export OSS2EE_OPENBLAS_INCS="-I/gpfs/projects/bsc15/bsc15992/installation/OpenBLAS-0.3.20/include"
+export OSS2EE_OPENBLAS_LIBS="-L/gpfs/projects/bsc15/bsc15992/installation/OpenBLAS-0.3.20/lib -lopenblas"
+export LD_LIBRARY_PATH=/gpfs/projects/bsc15/bsc15992/installation/OpenBLAS-0.3.20/lib:$LD_LIBRARY_PATH
+
+# Extra package configuration (for building purposes): TAMPI
+export OSS2EE_TAMPI_LIB_DIR=$TAMPI_HOME/lib
+export OSS2EE_TAMPI_INC_DIR=$TAMPI_HOME/include
+
+# Command for compiling and running hybrid MPI programs
+export OSS2EE_MPICC_COMMAND="mpicc"
+export OSS2EE_MPICXX_COMMAND="mpicxx"
+export OSS2EE_MPIRUN_COMMAND="srun --cpu-bind=cores"
+
+# Include Paraver manually
+export PATH=/apps/BSCTOOLS/wxparaver/4.7.2/bin:$PATH
+
+# Put all Nanos6 feature by default
+unset NANOS6_CONFIG_OVERRIDE

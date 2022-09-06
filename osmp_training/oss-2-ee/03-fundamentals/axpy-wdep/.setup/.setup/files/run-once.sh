@@ -1,0 +1,7 @@
+
+S=16777216
+TS=8192
+
+ITERS=100
+
+./axpy $S $TS $ITERS

@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# Mercurium, Nanos6, Extrae and Paraver are loaded by default
+
+# You should provide a job scheduler header for one node execution
+cat > $OSS2EE_CONFIG_DIR/job-sched-1n << EOF
+# No job-scheduler header for one node execution
+# Job scheduler variables must guarantee a default
+# execution in a single node. In general, CPUs can
+# be mapped following different rules, as it would
+# be user's responsability to check the correct
+# value of these default fields.
+EOF
+
+# You should provide a job scheduler header for multi-node execution
+cat > $OSS2EE_CONFIG_DIR/job-sched-mn << EOF
+# No job-scheduler header for multi-node execution
+# Job scheduler variables must guarantee a default
+# execution in multiple nodes. In general CPUs and
+# app. processes can be mapped following different
+# rules, as it would be user's responsability to
+# check the correct value of these default fields.
+EOF
+
+# Extra package configuration (building purposes): MPI
+export OSS2EE_MPI_LIB_DIR=/usr/lib/openmpi/lib
+export OSS2EE_MPI_INC_DIR=/usr/lib/openmpi/include
+
+# Extra package configuration (building purposes): MKL
+export OSS2EE_MKL_LIB_DIR=/home/user/Builds/mkl/lib/intel64
+export OSS2EE_MKL_INC_DIR=/home/user/Builds/mkl/include
+
+# Extra package configuration (building purposes): ATLAS
+export OSS2EE_ATL_LIB_DIR=/usr/lib
+export OSS2EE_ATL_INC_DIR=/gpfs/apps/NVIDIA/ATLAS/3.9.51/include
+
+# Put all Nanos6 feature by default
+unset NANOS6_CONFIG_OVERRIDE

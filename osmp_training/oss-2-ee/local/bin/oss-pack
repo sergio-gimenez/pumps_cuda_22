@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+ROOTNAME=$(readlink -f $(dirname ${BASH_SOURCE[0]}))
+CALLERWD=`pwd`
+
+$ROOTNAME/oss-verify
+$ROOTNAME/oss-wipe
+
+echo "OmpSs-2 EE (pack): removing current configuration"
+rm -fr $OSS2EE_CONFIG_DIR/*
+
+echo "OmpSs-2 EE (pack): generating oss-2-ee.tar.gz package"
+git archive --format=tar.gz --output=oss-2-ee.tar.gz --prefix=oss-2-ee/ HEAD \
+    || { echo >&2 "> OmpSs-2 EE (pack): requires git repository (exit status = 1) "; exit 1; }
+
+echo "OmpSs-2 EE (pack): package has been generated in" $OSS2EE
+
+cd $CALLERWD

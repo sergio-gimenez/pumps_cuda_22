@@ -1,0 +1,28 @@
+#!/bin/bash
+
+RED=$'\e[1;31m'    
+GRN=$'\e[1;32m' 
+SET=$'\e[0m'
+
+OUTPUT="($$)"
+if [ ! -z "$CHECK_OPTIONS" ]; then
+   OUTPUT="$CHECK_OPTIONS:"
+fi
+OUTPUT="$OUTPUT $*"
+
+len=`echo ${#OUTPUT}`
+while [ $len -lt 74 ];
+do
+   OUTPUT=$OUTPUT"."
+   let len=len+1
+done
+
+$* &> /dev/null
+
+if [ $? -eq 0 ]; then
+    OUTPUT=$OUTPUT:"$GRN pass$SET"
+else
+    OUTPUT=$OUTPUT:"$RED fail$SET"
+fi
+
+echo $OUTPUT

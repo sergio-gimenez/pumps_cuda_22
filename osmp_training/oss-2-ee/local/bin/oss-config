@@ -1,0 +1,65 @@
+#!/bin/bash
+
+# Checking Mercurium source-to-source compiler
+if ! [ -x "$(command -v mcc)" ]; then
+  echo '> ERROR: Mercurium source-to-source compiler not found (mcc)!'
+else
+  echo '> Mercurium source-to-source compiler found at' `which mcc`
+  # mcc --version
+fi
+
+# Checking Extrae merger utility 
+if ! [ -x "$(command -v mpi2prv)" ]; then
+  echo '> WARNING: Extrae merger not found (mpi2prv)!'
+else
+  echo '> Extrae merger found at' `which mpi2prv`
+fi
+
+# Checking Paraver utility
+if ! [ -x "$(command -v wxparaver)" ]; then
+  echo '> WARNING: Paraver utility not found (wxparaver)!'
+else
+  echo '> Paraver found at' `which wxparaver`
+fi
+
+# Checking Job Scheduler configuration and verbose the output: one-node
+if [ ! -f $OSS2EE_CONFIG_DIR/job-sched-1n ]; then
+   echo '> WARNING: Job scheduler header for one-node execution not found!'
+else
+   echo '> Job scheduler header for one-node execution:' $OSS2EE_CONFIG_DIR/job-sched-1n
+   #cat  $OSS2EE_CONFIG_DIR/job-sched-1n
+fi
+
+# Checking Job Scheduler configuration and verbose the output: multi-node
+if [ ! -f $OSS2EE_CONFIG_DIR/job-sched-mn ]; then
+   echo '> WARNING: Job scheduler header for multi-node execution not found!'
+else
+   echo '> Job scheduler header for multi-node execution:' $OSS2EE_CONFIG_DIR/job-sched-mn
+   #cat  $OSS2EE_CONFIG_DIR/job-sched-mn
+fi
+
+# Checking MPI library
+if [ ! -f $OSS2EE_MPI_LIB_DIR/libmpi.so ]; then
+   echo '> WARNING: MPI library not found, some tests may not be compiled!'
+else
+   echo '> MPI library found at' $OSS2EE_MPI_LIB_DIR
+fi
+
+# Checking MKL library
+if [ ! -f $OSS2EE_MKL_LIB_DIR/libmkl_sequential.so ]; then
+   echo '> WARNING: MKL library not found, some tests may not be compiled!'
+else
+   echo '> MKL library found at' $OSS2EE_MKL_LIB_DIR
+fi
+
+# Checking ATLAS library
+if [ ! -f $OSS2EE_ATL_LIB_DIR/libatlas.a ]; then
+   echo '> WARNING: ATLAS library not found, some tests may not be compiled!'
+else
+   echo '> ATLAS library found at' $OSS2EE_ATL_LIB_DIR
+fi
+
+# Print Environment Variable's configuration
+oss-ev
+
+

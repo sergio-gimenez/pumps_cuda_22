@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ ! -x "$OSS2EE" ]; then
+   echo "Error: the general 'configure' was not correctly executed"
+else
+   export OSS2EE_NANOS6_DIRECTORY=0
+   export NANOS6_CONFIG_OVERRIDE="devices.directory.enabled=false"
+   echo "Enabling unified memory for OmpSs-2 devices. Setting the following envars:"
+   echo "    OSS2EE_NANOS6_DIRECTORY=$OSS2EE_NANOS6_DIRECTORY"
+   echo "    NANOS6_CONFIG_OVERRIDE=\"$NANOS6_CONFIG_OVERRIDE\""
+fi

@@ -1,0 +1,15 @@
+#!/bin/bash -e
+
+num_expr='^[0-9]+$'
+
+DIR=`pwd`
+while [[ "$DIR" != "." && "$DIR" != "/" ]]
+do
+   TT=`basename $DIR`; 
+   BN="${TT:0:2}"
+   if [[ $BN =~ $num_expr ]] ; then
+      echo $BN
+      exit 0
+   fi
+   DIR=`dirname -- "$DIR"`
+done

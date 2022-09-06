@@ -1,0 +1,23 @@
+#!/bin/bash -e
+
+verbosity="false"
+
+# Checking if OSS2EE variable is properly set
+if [ -z ${OSS2EE+x} ]; then 
+   echo "OmpSs-2 EE (check): Environment variables not set (exit status = 1)";
+   exit 1
+else
+   if [ -z "$OSS2EE" ]; then
+      echo "OmpSs-2 EE (check): Environment variables is not properly set (blank, exit status = 2)";
+      exit 2
+   else
+      if ! [ -d "$OSS2EE" ]; then
+         echo "OmpSs-2 EE (check): Environment variables is not properly set (directory does not exist, exit status = 3)";
+         exit 3
+      else
+         if [ "$verbosity" == "true" ]; then
+            echo "OmpSs-2 EE (check): Environment variables set to" $OSS2EE;
+         fi
+      fi
+   fi
+fi

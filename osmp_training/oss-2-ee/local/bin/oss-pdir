@@ -1,0 +1,18 @@
+#!/bin/bash -e
+
+num_expr='^[0-9]+$'
+
+DIR=`pwd`
+PDIR=`basename $DIR`; 
+
+DIR=`dirname -- "$DIR"`
+GDIR=`basename $DIR`;
+
+BN="${GDIR:0:2}"
+
+DIR=`dirname -- "$DIR"`
+SDIR=`basename $DIR`;
+
+if [[ $BN =~ $num_expr ]] ; then
+   echo $SDIR/$GDIR/$PDIR
+fi

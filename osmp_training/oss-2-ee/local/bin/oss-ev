@@ -1,0 +1,4 @@
+#!/bin/bash -e
+
+echo '> The current environment variables have been set:'
+env | grep '^OSS2EE' - | sort
